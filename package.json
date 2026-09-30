@@ -1,0 +1,22 @@
+{
+  "name": "docx-render-gateway",
+  "version": "1.0.0",
+  "description": "DocxRender Gateway - render DOCX templates from JSON via REST",
+  "main": "src/server.js",
+  "private": true,
+  "scripts": {
+    "start": "node src/server.js",
+    "test": "node --test test/*.test.js"
+  },
+  "engines": {
+    "node": ">=20"
+  },
+  "dependencies": {
+    "@slosarek/docxtemplater-image-module-free": "1.2.0",
+    "angular-expressions": "1.7.0",
+    "docxtemplater": "3.71.0",
+    "express": "5.2.1",
+    "multer": "2.4.0",
+    "pizzip": "3.3.0"
+  }
+}

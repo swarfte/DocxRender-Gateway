@@ -1,0 +1,38 @@
+services:
+  docx-render-gateway:
+    build:
+      context: .
+    image: docx-render-gateway
+    container_name: docx-render-gateway
+    restart: unless-stopped
+
+    # In company deployment, put this behind a reverse proxy (HTTPS) instead of publishing the port.
+    ports:
+      - "3000:3000"
+
+    environment:
+      NODE_ENV: production
+      PORT: 3000
+      # Optional: pin the token instead of using the generated /app/secrets/api-token
+      API_TOKEN: ${DOCX_RENDER_API_TOKEN:-}
+      MAX_TEMPLATE_BYTES: 26214400
+      MAX_DATA_BYTES: 10485760
+      MAX_TOTAL_BYTES: 36700160
+      RENDER_TIMEOUT_MS: 120000
+      MAX_CONCURRENT_RENDERS: 2
+      DEFAULT_IMAGE_WIDTH: 200
+      DEFAULT_IMAGE_HEIGHT: 80
+      LOG_LEVEL: info
+      IMAGE_URL_ENABLED: true
+      IMAGE_URL_ALLOWED_HOSTS: ${IMAGE_URL_ALLOWED_HOSTS:-}
+      MAX_IMAGE_BYTES: 5242880
+      IMAGE_FETCH_TIMEOUT_MS: 10000
+
+    volumes:
+      - docx-render-secrets:/app/secrets
+
+    mem_limit: 1g
+    cpus: 1.0
+
+volumes:
+  docx-render-secrets:
