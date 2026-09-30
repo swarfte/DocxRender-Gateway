@@ -28,7 +28,7 @@ curl -X POST http://localhost:3000/templater/render \
 
 ## Template syntax
 
-`{name}`, `{customer.name}`, `{#items}…{/items}` (loops / booleans), `{%logo}` (image, alone in its paragraph; value is a `data:image/png|jpeg;base64,…` URI **or** an `http(s)://…` PNG/JPEG URL). Images are inserted at their original pixel size. To override per image, add a plain form field named after the tag with value `WxH` (px), e.g. `-F client_icon=50x50 -F client_image=300x300` for `{%client_icon}` / `{%client_image}`; tags without a field keep their original size.
+`{name}`, `{customer.name}`, `{#items}…{/items}` (loops / booleans), `{%logo}` (image, alone in its paragraph; value is a `data:image/png|jpeg;base64,…` URI **or** an `http(s)://…` PNG/JPEG URL). Images are inserted at their original pixel size. To scale one, add a sibling key `<name>{size}` with value `WxH` (px) in the data JSON, e.g. `"client_icon{size}": "50x50"` next to `"client_icon": "https://…"`; it applies only to that object (so per loop item). Images without a `{size}` key keep their original size.
 
 ## Configuration
 
@@ -37,5 +37,5 @@ See `.env.example`. Errors are returned as JSON `{ success:false, request_id, er
 ## Known limitations
 
 - The image module writes every image as `word/media/image_generated_N.png`, even JPEGs. Word normally sniffs the real format, but verify with your templates.
-- No SVG/GIF images. Original-size images are not shrunk to the page width, so large source images will overflow unless you give a size field.
+- No SVG/GIF images. Original-size images are not shrunk to the page width, so large source images will overflow unless you give a `{size}` key.
 - URL images are fetched server-side with SSRF guards: private/loopback/link-local addresses are blocked (checked at connect time, including after redirects), ports limited to 80/443, max 3 redirects, size cap `MAX_IMAGE_BYTES`, timeout `IMAGE_FETCH_TIMEOUT_MS`. Restrict further with `IMAGE_URL_ALLOWED_HOSTS`, or turn off with `IMAGE_URL_ENABLED=false`. Images hosted on an internal network are therefore not reachable by design.

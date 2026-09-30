@@ -190,41 +190,43 @@ test('URL images can be disabled and host-restricted', async () => {
 // --- image sizing ---
 const extents = (xml) => [...xml.matchAll(/<wp:extent cx="(\d+)" cy="(\d+)"/g)].map((m) => [Number(m[1]) / 9525, Number(m[2]) / 9525]);
 
-async function renderSized(paragraphs, data, fields) {
-  const res = await post(h.buildForm({ data, template: h.buildDocx(paragraphs), fields }));
+async function renderSized(paragraphs, data) {
+  const res = await post(h.buildForm({ data, template: h.buildDocx(paragraphs) }));
   return { res, xml: res.status === 200 ? h.documentXml(Buffer.from(await res.arrayBuffer())) : null };
 }
 
-test('uses the image original size when no size field is given', async () => {
+test('uses the image original size when no {size} key is given', async () => {
   const { res, xml } = await renderSized(['{%logo}'], { logo: h.pngDataUri(120, 45) });
   assert.equal(res.status, 200);
   assert.deepEqual(extents(xml), [[120, 45]]);
 });
 
-test('per-tag size fields override the original size independently', async () => {
+test('"<name>{size}" keys override the original size independently', async () => {
   const { res, xml } = await renderSized(['{%client_icon}', '{%client_image}', '{%other}'], {
+    'client_icon{size}': '50x50',
     client_icon: h.pngDataUri(400, 400),
     client_image: h.pngDataUri(10, 10),
+    'client_image{size}': '300X200',
     other: h.pngDataUri(77, 33),
-  }, { client_icon: '50x50', client_image: '300X200' });
+  });
   assert.equal(res.status, 200);
   assert.deepEqual(extents(xml), [[50, 50], [300, 200], [77, 33]]);
 });
 
-test('size field applies inside loops and to URL images', async () => {
+test('{size} is scoped per object inside loops', async () => {
   const { xml } = await renderSized(['{#items}', '{%pic}', '{/items}'], {
-    items: [{ pic: h.pngDataUri(9, 9) }, { pic: h.pngDataUri(20, 20) }],
-  }, { pic: '40x30' });
-  assert.deepEqual(extents(xml), [[40, 30], [40, 30]]);
+    items: [{ pic: h.pngDataUri(9, 9), 'pic{size}': '40x30' }, { pic: h.pngDataUri(20, 20) }],
+  });
+  assert.deepEqual(extents(xml), [[40, 30], [20, 20]]);
 });
 
-test('invalid size field value -> 400', async () => {
-  const { res } = await renderSized(['{%logo}'], { logo: h.pngDataUri(5, 5) }, { logo: 'big' });
+test('invalid {size} value -> 400', async () => {
+  const { res } = await renderSized(['{%logo}'], { logo: h.pngDataUri(5, 5), 'logo{size}': 'big' });
   assert.equal(res.status, 400);
   assert.equal((await res.json()).error.code, 'INVALID_IMAGE_SIZE');
 });
 
 test('zero size -> 400', async () => {
-  const { res } = await renderSized(['{%logo}'], { logo: h.pngDataUri(5, 5) }, { logo: '0x50' });
+  const { res } = await renderSized(['{%logo}'], { logo: h.pngDataUri(5, 5), 'logo{size}': '0x50' });
   assert.equal(res.status, 400);
 });

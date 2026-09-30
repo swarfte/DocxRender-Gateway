@@ -89,7 +89,7 @@ async function startServer(overrides = {}) {
   return { server, url: `http://127.0.0.1:${server.address().port}/templater/render` };
 }
 
-function buildForm({ data, template, dataName = 'data', templateName = 'templater', extra, fields } = {}) {
+function buildForm({ data, template, dataName = 'data', templateName = 'templater', extra } = {}) {
   const form = new FormData();
   if (data !== undefined) {
     const body = typeof data === 'string' || Buffer.isBuffer(data) ? data : JSON.stringify(data);
@@ -98,7 +98,6 @@ function buildForm({ data, template, dataName = 'data', templateName = 'template
   if (template !== undefined) {
     form.append(templateName, new Blob([template], { type: DOCX_MIME }), 'template.docx');
   }
-  for (const [k, v] of Object.entries(fields || {})) form.append(k, v);
   if (extra) form.append('extra', new Blob(['x']), 'extra.txt');
   return form;
 }

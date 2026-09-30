@@ -8,7 +8,7 @@ console.log = () => {};
 const Docxtemplater = require('docxtemplater');
 const expressionParser = require('docxtemplater/expressions.js');
 const { loadDocx } = require('./validate-docx');
-const { createImageModule, assertSupportedImages } = require('./image-module');
+const { createImageModule, assertSupportedImages, applyImageSizes } = require('./image-module');
 
 function describeError(err) {
   if (err && err.status && err.code) {
@@ -29,11 +29,12 @@ function describeError(err) {
 
 (async () => {
 try {
-  const { template, data, imageSizes, urlOptions } = workerData;
+  const { template, data, urlOptions } = workerData;
   assertSupportedImages(data);
+  applyImageSizes(data);
   const zip = loadDocx(Buffer.from(template));
   const doc = new Docxtemplater(zip, {
-    modules: [createImageModule({ imageSizes, urlOptions })],
+    modules: [createImageModule({ urlOptions })],
     parser: expressionParser,
     paragraphLoop: true,
     linebreaks: true,

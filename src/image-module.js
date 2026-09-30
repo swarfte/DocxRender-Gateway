@@ -55,6 +55,7 @@ function assertImageContent(buffer, expectPng) {
 }
 
 async function loadImage(value, urlOptions) {
+  if (value && typeof value === 'object') value = value.src;
   if (typeof value === 'string' && /^https?:\/\//i.test(value.trim())) {
     if (!urlOptions.enabled) throw new Error('Image URLs are disabled.');
     return assertImageContent(await fetchImage(value, urlOptions));
@@ -62,10 +63,43 @@ async function loadImage(value, urlOptions) {
   return decodeDataUri(value);
 }
 
-// Explicit size for the tag (form field) wins; otherwise use the image's own pixel size.
-function resolveSize(img, tagName, imageSizes) {
-  const explicit = imageSizes.get(tagName);
-  if (explicit) return explicit;
+const SIZE_SUFFIX = '{size}';
+const SIZE_PATTERN = /^(\d{1,5})\s*[xX×]\s*(\d{1,5})$/;
+
+function parseSize(key, value) {
+  const match = typeof value === 'string' ? SIZE_PATTERN.exec(value.trim()) : null;
+  const width = match && Number(match[1]);
+  const height = match && Number(match[2]);
+  if (!match || width < 1 || height < 1) {
+    throw errors.badRequest('INVALID_IMAGE_SIZE', `"${key}" must be an image size like 300x200.`);
+  }
+  return [width, height];
+}
+
+// Consumes sibling "<name>{size}": "WxH" keys from the data: removes them and attaches the size
+// to the "<name>" image value as { src, size }, so it is scoped to that exact object (loops included).
+function applyImageSizes(root) {
+  const stack = [root];
+  while (stack.length) {
+    const node = stack.pop();
+    if (!node || typeof node !== 'object') continue;
+    if (!Array.isArray(node)) {
+      for (const key of Object.keys(node)) {
+        if (!key.endsWith(SIZE_SUFFIX) || key.length === SIZE_SUFFIX.length) continue;
+        const size = parseSize(key, node[key]);
+        const name = key.slice(0, -SIZE_SUFFIX.length);
+        delete node[key];
+        if (typeof node[name] === 'string') node[name] = { src: node[name], size };
+      }
+    }
+    for (const child of Object.values(node)) stack.push(child);
+  }
+  return root;
+}
+
+// Explicit size from the data (<name>{size}) wins; otherwise use the image's own pixel size.
+function resolveSize(img, tagValue) {
+  if (tagValue && typeof tagValue === 'object' && tagValue.size) return tagValue.size;
   let dims;
   try {
     dims = imageSize(img);
@@ -76,13 +110,13 @@ function resolveSize(img, tagName, imageSizes) {
   return [dims.width, dims.height];
 }
 
-function createImageModule({ imageSizes = new Map(), urlOptions }) {
+function createImageModule({ urlOptions }) {
   return new ImageModule({
     centered: false,
     fileType: 'docx',
     getImage: (tagValue) => loadImage(tagValue, urlOptions),
-    getSize: (img, tagValue, tagName) => resolveSize(img, tagName, imageSizes),
+    getSize: (img, tagValue) => resolveSize(img, tagValue),
   });
 }
 
-module.exports = { createImageModule, assertSupportedImages, decodeDataUri };
+module.exports = { createImageModule, assertSupportedImages, applyImageSizes, decodeDataUri };
