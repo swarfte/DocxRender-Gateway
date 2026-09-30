@@ -17,6 +17,8 @@ const config = {
   maxTotalBytes: intEnv('MAX_TOTAL_BYTES', 36700160),
   renderTimeoutMs: intEnv('RENDER_TIMEOUT_MS', 120000),
   maxConcurrentRenders: intEnv('MAX_CONCURRENT_RENDERS', 2),
+  maxImageWidth: intEnv('MAX_IMAGE_WIDTH', 600),
+  maxImageHeight: intEnv('MAX_IMAGE_HEIGHT', 800),
   imageUrl: {
     enabled: process.env.IMAGE_URL_ENABLED !== 'false',
     allowedHosts: (process.env.IMAGE_URL_ALLOWED_HOSTS || '').split(',').map((h) => h.trim().toLowerCase()).filter(Boolean),

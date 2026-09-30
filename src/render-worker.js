@@ -29,11 +29,11 @@ function describeError(err) {
 
 (async () => {
 try {
-  const { template, data, imageSizes, urlOptions } = workerData;
+  const { template, data, imageSizes, urlOptions, maxImage } = workerData;
   assertSupportedImages(data);
   const zip = loadDocx(Buffer.from(template));
   const doc = new Docxtemplater(zip, {
-    modules: [createImageModule({ imageSizes, urlOptions })],
+    modules: [createImageModule({ imageSizes, urlOptions, maxImage })],
     parser: expressionParser,
     paragraphLoop: true,
     linebreaks: true,

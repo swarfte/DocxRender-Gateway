@@ -228,3 +228,14 @@ test('zero size -> 400', async () => {
   const { res } = await renderSized(['{%logo}'], { logo: h.pngDataUri(5, 5) }, { logo: '0x50' });
   assert.equal(res.status, 400);
 });
+
+test('oversized images are scaled down proportionally; small ones and explicit sizes are untouched', async () => {
+  const { res, xml } = await renderSized(['{%wide}', '{%tall}', '{%small}', '{%forced}'], {
+    wide: h.pngDataUri(3000, 1500),
+    tall: h.pngDataUri(400, 2000),
+    small: h.pngDataUri(100, 50),
+    forced: h.pngDataUri(3000, 3000),
+  }, { forced: '1000x1000' });
+  assert.equal(res.status, 200);
+  assert.deepEqual(extents(xml), [[600, 300], [160, 800], [100, 50], [1000, 1000]]);
+});

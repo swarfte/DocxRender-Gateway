@@ -48,6 +48,7 @@ function createApp({ token, config }) {
           data,
           imageSizes: req.imageSizes,
           urlOptions: config.imageUrl,
+          maxImage: { width: config.maxImageWidth, height: config.maxImageHeight },
           timeoutMs: config.renderTimeoutMs,
         });
         res.set({

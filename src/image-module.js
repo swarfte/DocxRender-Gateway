@@ -62,8 +62,14 @@ async function loadImage(value, urlOptions) {
   return decodeDataUri(value);
 }
 
-// Explicit size for the tag (form field) wins; otherwise use the image's own pixel size.
-function resolveSize(img, tagName, imageSizes) {
+// Explicit size for the tag (form field) wins; otherwise the image's own pixel size, capped to fit the page.
+// Shrinks (never enlarges) to fit the max box, keeping the aspect ratio.
+function fitWithin(width, height, max) {
+  const scale = Math.min(1, max.width / width, max.height / height);
+  return [Math.max(1, Math.round(width * scale)), Math.max(1, Math.round(height * scale))];
+}
+
+function resolveSize(img, tagName, imageSizes, maxImage) {
   const explicit = imageSizes.get(tagName);
   if (explicit) return explicit;
   let dims;
@@ -73,15 +79,15 @@ function resolveSize(img, tagName, imageSizes) {
     throw new Error('Could not read the image dimensions.');
   }
   if (!dims.width || !dims.height) throw new Error('Could not read the image dimensions.');
-  return [dims.width, dims.height];
+  return fitWithin(dims.width, dims.height, maxImage);
 }
 
-function createImageModule({ imageSizes = new Map(), urlOptions }) {
+function createImageModule({ imageSizes = new Map(), urlOptions, maxImage = { width: Infinity, height: Infinity } }) {
   return new ImageModule({
     centered: false,
     fileType: 'docx',
     getImage: (tagValue) => loadImage(tagValue, urlOptions),
-    getSize: (img, tagValue, tagName) => resolveSize(img, tagName, imageSizes),
+    getSize: (img, tagValue, tagName) => resolveSize(img, tagName, imageSizes, maxImage),
   });
 }
 

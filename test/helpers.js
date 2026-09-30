@@ -79,6 +79,8 @@ async function startServer(overrides = {}) {
     maxTotalBytes: 36700160,
     renderTimeoutMs: 20000,
     maxConcurrentRenders: 2,
+    maxImageWidth: 600,
+    maxImageHeight: 800,
     imageUrl: { enabled: true, allowedHosts: [], allowedPorts: [80, 443], allowPrivate: false, maxBytes: 5242880, timeoutMs: 5000 },
     ...overrides,
   };
