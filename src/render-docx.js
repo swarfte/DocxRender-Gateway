@@ -7,10 +7,10 @@ const { HttpError, errors } = require('./errors');
 const WORKER_FILE = path.join(__dirname, 'render-worker.js');
 
 // Renders in a worker thread; rejects with HttpError on failure or timeout.
-function renderDocx({ template, data, imageWidth, imageHeight, urlOptions, timeoutMs }) {
+function renderDocx({ template, data, imageSizes, urlOptions, timeoutMs }) {
   return new Promise((resolve, reject) => {
     const worker = new Worker(WORKER_FILE, {
-      workerData: { template, data, imageWidth, imageHeight, urlOptions },
+      workerData: { template, data, imageSizes, urlOptions },
     });
     let settled = false;
     const finish = (fn, value) => {

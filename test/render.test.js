@@ -57,10 +57,11 @@ test('inserts PNG data URI image', async () => {
 });
 
 test('inserts JPEG data URI image', async () => {
-  const res = await post(h.buildForm({ data: { logo: h.JPEG_DATA_URI }, template: h.buildDocx(['{%logo}']) }));
+  const res = await post(h.buildForm({ data: { logo: h.jpegDataUri(64, 32) }, template: h.buildDocx(['{%logo}']) }));
   assert.equal(res.status, 200, await res.clone().text());
   const zip = new PizZip(Buffer.from(await res.arrayBuffer()));
   assert.ok(Object.keys(zip.files).some((f) => f.startsWith('word/media/')));
+  assert.deepEqual(extents(zip.file('word/document.xml').asText()), [[64, 32]]);
 });
 
 test('rejects non-http(s) image URL scheme with 422', async () => {
@@ -184,4 +185,46 @@ test('URL images can be disabled and host-restricted', async () => {
     assert.equal((await renderUrl(urlCfg({ enabled: false }), `${base}/x.png`)).status, 422);
     assert.equal((await renderUrl(urlCfg({ allowedHosts: ['example.com'] }), `${base}/x.png`)).status, 422);
   });
+});
+
+// --- image sizing ---
+const extents = (xml) => [...xml.matchAll(/<wp:extent cx="(\d+)" cy="(\d+)"/g)].map((m) => [Number(m[1]) / 9525, Number(m[2]) / 9525]);
+
+async function renderSized(paragraphs, data, fields) {
+  const res = await post(h.buildForm({ data, template: h.buildDocx(paragraphs), fields }));
+  return { res, xml: res.status === 200 ? h.documentXml(Buffer.from(await res.arrayBuffer())) : null };
+}
+
+test('uses the image original size when no size field is given', async () => {
+  const { res, xml } = await renderSized(['{%logo}'], { logo: h.pngDataUri(120, 45) });
+  assert.equal(res.status, 200);
+  assert.deepEqual(extents(xml), [[120, 45]]);
+});
+
+test('per-tag size fields override the original size independently', async () => {
+  const { res, xml } = await renderSized(['{%client_icon}', '{%client_image}', '{%other}'], {
+    client_icon: h.pngDataUri(400, 400),
+    client_image: h.pngDataUri(10, 10),
+    other: h.pngDataUri(77, 33),
+  }, { client_icon: '50x50', client_image: '300X200' });
+  assert.equal(res.status, 200);
+  assert.deepEqual(extents(xml), [[50, 50], [300, 200], [77, 33]]);
+});
+
+test('size field applies inside loops and to URL images', async () => {
+  const { xml } = await renderSized(['{#items}', '{%pic}', '{/items}'], {
+    items: [{ pic: h.pngDataUri(9, 9) }, { pic: h.pngDataUri(20, 20) }],
+  }, { pic: '40x30' });
+  assert.deepEqual(extents(xml), [[40, 30], [40, 30]]);
+});
+
+test('invalid size field value -> 400', async () => {
+  const { res } = await renderSized(['{%logo}'], { logo: h.pngDataUri(5, 5) }, { logo: 'big' });
+  assert.equal(res.status, 400);
+  assert.equal((await res.json()).error.code, 'INVALID_IMAGE_SIZE');
+});
+
+test('zero size -> 400', async () => {
+  const { res } = await renderSized(['{%logo}'], { logo: h.pngDataUri(5, 5) }, { logo: '0x50' });
+  assert.equal(res.status, 400);
 });

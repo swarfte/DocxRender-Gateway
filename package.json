@@ -16,6 +16,7 @@
     "angular-expressions": "1.7.0",
     "docxtemplater": "3.71.0",
     "express": "5.2.1",
+    "image-size": "2.0.4",
     "multer": "2.4.0",
     "pizzip": "3.3.0"
   }

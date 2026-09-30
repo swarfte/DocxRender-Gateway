@@ -46,8 +46,7 @@ function createApp({ token, config }) {
         const output = await renderDocx({
           template: req.templateFile.buffer,
           data,
-          imageWidth: config.imageWidth,
-          imageHeight: config.imageHeight,
+          imageSizes: req.imageSizes,
           urlOptions: config.imageUrl,
           timeoutMs: config.renderTimeoutMs,
         });

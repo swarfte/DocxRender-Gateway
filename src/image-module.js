@@ -2,6 +2,7 @@
 
 const ImageModule = require('@slosarek/docxtemplater-image-module-free');
 const { errors } = require('./errors');
+const { imageSize } = require('image-size');
 const { fetchImage } = require('./fetch-image');
 
 const DATA_URI = /^data:image\/(png|jpe?g);base64,([A-Za-z0-9+/=\s]+)$/i;
@@ -61,12 +62,26 @@ async function loadImage(value, urlOptions) {
   return decodeDataUri(value);
 }
 
-function createImageModule({ width, height, urlOptions }) {
+// Explicit size for the tag (form field) wins; otherwise use the image's own pixel size.
+function resolveSize(img, tagName, imageSizes) {
+  const explicit = imageSizes.get(tagName);
+  if (explicit) return explicit;
+  let dims;
+  try {
+    dims = imageSize(img);
+  } catch {
+    throw new Error('Could not read the image dimensions.');
+  }
+  if (!dims.width || !dims.height) throw new Error('Could not read the image dimensions.');
+  return [dims.width, dims.height];
+}
+
+function createImageModule({ imageSizes = new Map(), urlOptions }) {
   return new ImageModule({
     centered: false,
     fileType: 'docx',
     getImage: (tagValue) => loadImage(tagValue, urlOptions),
-    getSize: () => [width, height],
+    getSize: (img, tagValue, tagName) => resolveSize(img, tagName, imageSizes),
   });
 }
 
