@@ -3,7 +3,7 @@
 import { test } from 'vitest';
 import assert from 'node:assert/strict';
 import PizZip from 'pizzip';
-import { app, buildDocx, buildForm, makeEnv, post, TOKEN } from './helpers';
+import { app, buildDocx, buildForm, DOCX_MIME, makeEnv, post, TOKEN } from './helpers';
 
 const env = makeEnv({ MAX_DATA_BYTES: '1000', MAX_TEMPLATE_BYTES: '200000' });
 const tpl = () => buildDocx(['{a}']);
@@ -23,6 +23,34 @@ test('non-multipart content type -> 400', async () => {
     400,
     'INVALID_CONTENT_TYPE',
   );
+});
+
+test('multipart body under a wrong content-type header is recovered -> 200', async () => {
+  // API tools sometimes keep a stale manual Content-Type header while the body
+  // is real multipart; the boundary is derived from the body itself.
+  const res = await post(env, buildForm({ data: { a: 1 }, template: tpl() }), {
+    'Content-Type': 'application/json',
+  });
+  assert.equal(res.status, 200);
+});
+
+test('multipart header without boundary is recovered from the body -> 200', async () => {
+  const probe = new Request('http://probe', {
+    method: 'POST',
+    body: buildForm({ data: { a: 1 }, template: tpl() }),
+  });
+  const raw = new Uint8Array(await probe.arrayBuffer());
+  const res = await app.request(
+    'http://localhost/templater/render',
+    {
+      method: 'POST',
+      headers: { Authorization: `Bearer ${TOKEN}`, 'Content-Type': 'multipart/form-data' },
+      body: raw,
+    },
+    env,
+  );
+  assert.equal(res.status, 200);
+  assert.equal(res.headers.get('content-type'), DOCX_MIME);
 });
 
 test('missing data -> 400', async () => {
