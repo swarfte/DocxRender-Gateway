@@ -1,8 +1,0 @@
-node_modules
-test
-secrets
-.git
-.env
-spec.md
-docker-compose.yml
-Dockerfile
