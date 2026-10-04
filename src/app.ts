@@ -13,6 +13,22 @@ import type { AppEnv } from './app-env';
 
 const DOCX_MIME = 'application/vnd.openxmlformats-officedocument.wordprocessingml.document';
 
+// report.docx -> report_rendered.docx; falls back when no base name is derivable.
+function outputFilename(templateName: string): string {
+  const base = templateName.replace(/\.[^.]*$/, '');
+  return base ? `${base}_rendered.docx` : 'rendered-output.docx';
+}
+
+// RFC 6266/5987: quoted ASCII fallback plus a UTF-8 form so non-ASCII names survive.
+function contentDisposition(filename: string): string {
+  const fallback = filename.replace(/[^\x20-\x7e]/g, '_').replace(/["\\]/g, '\\$&');
+  const encoded = encodeURIComponent(filename).replace(
+    /['()*]/g,
+    (ch) => `%${ch.charCodeAt(0).toString(16).toUpperCase()}`,
+  );
+  return `attachment; filename="${fallback}"; filename*=UTF-8''${encoded}`;
+}
+
 export function createApp() {
   const app = new Hono<AppEnv>();
   // Per-isolate concurrent render counter (per process in the Express version).
@@ -61,7 +77,7 @@ export function createApp() {
         status: 200,
         headers: {
           'Content-Type': DOCX_MIME,
-          'Content-Disposition': 'attachment; filename="rendered-output.docx"',
+          'Content-Disposition': contentDisposition(outputFilename(templateFile.name)),
           'Cache-Control': 'no-store',
         },
       });

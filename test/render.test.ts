@@ -19,7 +19,7 @@ async function renderOk(paragraphs: string[], data: unknown) {
 test('replaces plain text and returns DOCX binary with spec headers', async () => {
   const { res, xml } = await renderOk(['Customer: {customer_name}'], { customer_name: 'University of Macau' });
   assert.equal(res.headers.get('content-type'), DOCX_MIME);
-  assert.match(res.headers.get('content-disposition')!, /rendered-output\.docx/);
+  assert.match(res.headers.get('content-disposition')!, /filename="template_rendered\.docx"/);
   assert.equal(res.headers.get('cache-control'), 'no-store');
   assert.ok(res.headers.get('x-request-id'));
   assert.match(xml, /Customer: University of Macau/);
@@ -30,6 +30,27 @@ test('supports nested object fields', async () => {
     customer: { name: 'UM', address: 'Taipa' },
   });
   assert.match(xml, /UM \/ Taipa/);
+});
+
+test('derives the output filename from the uploaded template name', async () => {
+  const res = await post(env, buildForm({ data: { a: 1 }, template: buildDocx(['{a}']) }));
+  assert.equal(res.status, 200, await res.clone().text());
+  const disposition = res.headers.get('content-disposition')!;
+  assert.match(disposition, /filename="template_rendered\.docx"/);
+  assert.match(disposition, /filename\*=UTF-8''template_rendered\.docx/);
+});
+
+test('carries non-ASCII template names in filename*', async () => {
+  const form = new FormData();
+  form.append('data', new Blob(['{"a":1}'], { type: 'application/json' }), 'data.json');
+  form.append('templater', new Blob([buildDocx(['{a}'])], { type: DOCX_MIME }), '報價單.docx');
+  const res = await post(env, form);
+  assert.equal(res.status, 200, await res.clone().text());
+  const disposition = res.headers.get('content-disposition')!;
+  assert.match(disposition, /filename\*=UTF-8''%E5%A0%B1%E5%83%B9%E5%96%AE_rendered\.docx/);
+  // The quoted fallback must stay pure ASCII.
+  const fallback = disposition.match(/filename="([^"]+)"/)![1]!;
+  assert.ok(/^[\x20-\x7e]+$/.test(fallback), fallback);
 });
 
 test('renders loops', async () => {

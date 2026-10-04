@@ -196,9 +196,13 @@ HTTP 200 OK
 Headers：
 
 Content-Type: application/vnd.openxmlformats-officedocument.wordprocessingml.document
-Content-Disposition: attachment; filename="rendered-output.docx"
+Content-Disposition: attachment; filename="template_rendered.docx"; filename*=UTF-8''template_rendered.docx
 X-Request-Id: <uuid>
 Cache-Control: no-store
+
+輸出檔名依上傳的 templater 檔名命名：剝除副檔名後加上 `_rendered.docx`
+（例：`template.docx` → `template_rendered.docx`）。非 ASCII 檔名（如中文）
+會另外以 RFC 5987 的 `filename*` 參數以 UTF-8 百分比編碼傳送。
 
 Body：
 
@@ -961,7 +965,7 @@ API token loaded from persistent storage.
     ↓
     檢查 output buffer
     ↓
-    回傳 rendered-output.docx
+    回傳 <templater 檔名>_rendered.docx
     ↓
     清除 reference
 
@@ -1032,7 +1036,7 @@ binary.data
 
 應包含：
 
-fileName: rendered-output.docx
+fileName: <templater 檔名>_rendered.docx（例：template_rendered.docx）
 mimeType: application/vnd.openxmlformats-officedocument.wordprocessingml.document
 
 20. curl 測試規格
@@ -1042,15 +1046,15 @@ mimeType: application/vnd.openxmlformats-officedocument.wordprocessingml.documen
      -H "Authorization: Bearer YOUR_API_TOKEN" \
      -F "data=@./sample.json;type=application/json" \
      -F "templater=@./template.docx;type=application/vnd.openxmlformats-officedocument.wordprocessingml.document" \
-     --output rendered-output.docx
+     --output template_rendered.docx
 
 驗證輸出：
 
-file rendered-output.docx
+file template_rendered.docx
 
 並測試 ZIP 結構：
 
-unzip -t rendered-output.docx
+unzip -t template_rendered.docx
 
 預期：
 
