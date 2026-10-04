@@ -1,0 +1,18 @@
+// Copy this file to .dev.vars for local development (`npx wrangler dev`).
+// .dev.vars is git-ignored; in production use `npx wrangler secret put API_TOKEN`.
+
+API_TOKEN=change-me-to-a-long-random-token-at-least-32-chars
+NODE_ENV=development
+LOG_LEVEL=debug
+
+# Optional limits (defaults in src/config.ts)
+# MAX_TEMPLATE_BYTES=26214400
+# MAX_DATA_BYTES=10485760
+# MAX_TOTAL_BYTES=36700160
+# RENDER_TIMEOUT_MS=120000
+# MAX_CONCURRENT_RENDERS=2
+# IMAGE_URL_ENABLED=true
+# IMAGE_URL_ALLOWED_HOSTS=
+# IMAGE_URL_ALLOW_PRIVATE=false
+# MAX_IMAGE_BYTES=5242880
+# IMAGE_FETCH_TIMEOUT_MS=10000

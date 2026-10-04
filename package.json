@@ -1,12 +1,15 @@
 {
   "name": "docx-render-gateway",
-  "version": "1.0.0",
-  "description": "DocxRender Gateway - render DOCX templates from JSON via REST",
-  "main": "src/server.js",
+  "version": "2.0.0",
+  "description": "DocxRender Gateway - render DOCX templates from JSON via REST (Cloudflare Workers + Hono)",
+  "main": "src/index.ts",
   "private": true,
   "scripts": {
-    "start": "node src/server.js",
-    "test": "node --test test/*.test.js"
+    "dev": "wrangler dev",
+    "deploy": "wrangler deploy",
+    "test": "vitest run",
+    "typecheck": "tsc --noEmit",
+    "cf-typegen": "wrangler types"
   },
   "engines": {
     "node": ">=20"
@@ -15,9 +18,14 @@
     "@slosarek/docxtemplater-image-module-free": "1.2.0",
     "angular-expressions": "1.7.0",
     "docxtemplater": "3.71.0",
-    "express": "5.2.1",
+    "hono": "^4.9.0",
     "image-size": "2.0.4",
-    "multer": "2.4.0",
     "pizzip": "3.3.0"
+  },
+  "devDependencies": {
+    "@cloudflare/workers-types": "^5.20261001.1",
+    "typescript": "^5.9.0",
+    "vitest": "^3.2.0",
+    "wrangler": "^4.40.0"
   }
 }

@@ -1,0 +1,17 @@
+{
+  "$schema": "node_modules/wrangler/config-schema.json",
+  "name": "docx-render-gateway",
+  "main": "src/index.ts",
+  "compatibility_date": "2026-10-04",
+  "compatibility_flags": ["nodejs_compat"],
+  "observability": {
+    "enabled": true
+  },
+  "vars": {
+    "NODE_ENV": "production",
+    "LOG_LEVEL": "info"
+  }
+  // Set the API token with: npx wrangler secret put API_TOKEN
+  // Optional limits (defaults shown in src/config.ts) can be added to "vars",
+  // e.g. "MAX_TEMPLATE_BYTES": "26214400"
+}

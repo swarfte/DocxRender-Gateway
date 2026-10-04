@@ -1,26 +1,26 @@
-'use strict';
-
-const { errors } = require('./errors');
+import { errors } from './errors';
 
 const MAX_DEPTH = 50;
 
-function depthExceeds(value, limit) {
-  const stack = [[value, 1]];
+export type JsonValue = string | number | boolean | null | JsonValue[] | { [key: string]: JsonValue };
+
+function depthExceeds(value: unknown, limit: number): boolean {
+  const stack: Array<[unknown, number]> = [[value, 1]];
   while (stack.length) {
-    const [node, depth] = stack.pop();
+    const [node, depth] = stack.pop()!;
     if (node && typeof node === 'object') {
       if (depth > limit) return true;
-      for (const child of Object.values(node)) stack.push([child, depth + 1]);
+      for (const child of Object.values(node as Record<string, unknown>)) stack.push([child, depth + 1]);
     }
   }
   return false;
 }
 
-function parseData(buffer) {
-  let text = buffer.toString('utf8');
+export function parseData(buffer: Uint8Array): JsonValue {
+  let text = new TextDecoder().decode(buffer);
   if (text.charCodeAt(0) === 0xfeff) text = text.slice(1);
 
-  let parsed;
+  let parsed: unknown;
   try {
     parsed = JSON.parse(text);
   } catch {
@@ -32,7 +32,5 @@ function parseData(buffer) {
   if (depthExceeds(parsed, MAX_DEPTH)) {
     throw errors.badRequest('JSON_TOO_DEEP', `The JSON nesting depth exceeds ${MAX_DEPTH}.`);
   }
-  return parsed;
+  return parsed as JsonValue;
 }
-
-module.exports = { parseData };
