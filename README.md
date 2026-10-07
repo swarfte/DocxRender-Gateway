@@ -40,7 +40,7 @@ curl -X POST http://localhost:8787/templater/render \
 
 ## Template syntax
 
-`{name}`, `{customer.name}`, `{#items}…{/items}` (loops / booleans), `{%logo}` (image, alone in its paragraph; value is a `data:image/png|jpeg;base64,…` URI **or** an `http(s)://…` PNG/JPEG URL). Images are inserted at their original pixel size. To scale one, add a sibling key `<name>{size}` with value `WxH` (px) in the data JSON, e.g. `"client_icon{size}": "50x50"` next to `"client_icon": "https://…"`; it applies only to that object (so per loop item). Images without a `{size}` key keep their original size.
+`{name}`, `{customer.name}`, `{#items}…{/items}` (loops / booleans), `{%logo}` (image, alone in its paragraph; value is a `data:image/png|jpeg;base64,…` URI **or** an `http(s)://…` image URL; PNG/JPEG are used as is, WebP/AVIF/GIF (e.g. Brandfetch CDN links) are converted to PNG via the `IMAGES` binding). Images are inserted at their original pixel size. To scale one, add a sibling key `<name>{size}` with value `WxH` (px) in the data JSON, e.g. `"client_icon{size}": "50x50"` next to `"client_icon": "https://…"`; it applies only to that object (so per loop item). Images without a `{size}` key keep their original size.
 
 ## Configuration
 
@@ -65,7 +65,7 @@ Errors are returned as JSON `{ success:false, request_id, error:{code,message} }
 ## Known limitations
 
 - The image module writes every image as `word/media/image_generated_N.png`, even JPEGs. Word normally sniffs the real format, but verify with your templates.
-- No SVG/GIF images. Original-size images are not shrunk to the page width, so large source images will overflow unless you give a `{size}` key.
+- URL images in other formats need the Cloudflare Images binding (`images` in `wrangler.jsonc`, already configured); without it they are rejected with 422. No SVG images, and Data URIs must be PNG/JPEG. Original-size images are not shrunk to the page width, so large source images will overflow unless you give a `{size}` key.
 - URL images are fetched with the guard set kept from the Node version: literal private/loopback/link-local IPs are rejected unless `IMAGE_URL_ALLOW_PRIVATE=true`, ports limited to 80/443, max 3 redirects, size cap `MAX_IMAGE_BYTES`, timeout `IMAGE_FETCH_TIMEOUT_MS`. Workers additionally cannot reach private networks at all, so hostname-based SSRF is excluded by the platform. Restrict further with `IMAGE_URL_ALLOWED_HOSTS`, or turn off with `IMAGE_URL_ENABLED=false`.
 - Renders are abandoned at the `RENDER_TIMEOUT_MS` deadline (Workers have no worker threads to kill); the isolate's CPU limit is the hard backstop for runaway CPU-bound renders.
 - `MAX_CONCURRENT_RENDERS` counts renders per isolate, matching the per-process limit of the Node version.

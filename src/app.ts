@@ -62,6 +62,7 @@ export function createApp() {
         template: new Uint8Array(await templateFile.arrayBuffer()),
         data,
         urlOptions: config.imageUrl,
+        images: c.env.IMAGES,
         timeoutMs: config.renderTimeoutMs,
       });
       logger.info('render_completed', {
