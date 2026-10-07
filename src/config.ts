@@ -7,6 +7,13 @@ export interface ImageUrlConfig {
   timeoutMs: number;
 }
 
+/** Minimal shape of the Cloudflare Images binding used to convert WebP/AVIF/GIF to PNG. */
+export interface ImagesBinding {
+  input(stream: ReadableStream<Uint8Array>): {
+    output(options: { format: 'image/png' }): Promise<{ response(): Response }>;
+  };
+}
+
 export interface Config {
   nodeEnv: string;
   maxTemplateBytes: number;
@@ -23,6 +30,8 @@ export interface Config {
  */
 export interface Env {
   API_TOKEN?: string;
+  /** Cloudflare Images binding; needed to accept WebP/AVIF/GIF URL images. */
+  IMAGES?: ImagesBinding;
   NODE_ENV?: string;
   LOG_LEVEL?: string;
   MAX_TEMPLATE_BYTES?: string;

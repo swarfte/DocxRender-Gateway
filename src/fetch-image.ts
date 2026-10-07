@@ -134,7 +134,7 @@ async function requestOnce(
       method: 'GET',
       redirect: 'manual',
       signal: AbortSignal.timeout(options.timeoutMs),
-      headers: { Accept: 'image/png,image/jpeg', 'User-Agent': 'DocxRender-Gateway' },
+      headers: { Accept: 'image/png,image/jpeg,image/webp,image/avif,image/gif,image/*;q=0.8', 'User-Agent': 'DocxRender-Gateway' },
     });
   } catch (err) {
     if (err instanceof Error && err.name === 'TimeoutError') {

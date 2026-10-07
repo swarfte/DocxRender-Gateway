@@ -2,7 +2,7 @@ import ImageModule from '@slosarek/docxtemplater-image-module-free';
 import { imageSize } from 'image-size';
 import { errors } from './errors';
 import { fetchImage } from './fetch-image';
-import type { ImageUrlConfig } from './config';
+import type { ImageUrlConfig, ImagesBinding } from './config';
 import type { JsonValue } from './validate-json';
 
 const DATA_URI = /^data:image\/(png|jpe?g);base64,([A-Za-z0-9+/=\s]+)$/i;
@@ -62,22 +62,34 @@ export function assertSupportedImages(root: unknown): void {
   }
 }
 
-// Accepts PNG/JPEG only, judged by content rather than by the declared type.
-function assertImageContent(buffer: Uint8Array, expectPng?: boolean): Uint8Array {
-  const isPng = startsWith(buffer, PNG_MAGIC);
-  const isJpeg = startsWith(buffer, JPEG_MAGIC);
-  if (!(isPng || isJpeg) || (expectPng === true && !isPng) || (expectPng === false && !isJpeg)) {
-    throw new Error('Image content is not a supported PNG or JPEG.');
+// PNG/JPEG pass through untouched. Any other format returned by a URL (e.g. the WebP that
+// Brandfetch serves) is converted to PNG through the Cloudflare Images binding, so Word can open it.
+async function normalizeImage(buffer: Uint8Array, images?: ImagesBinding): Promise<Uint8Array> {
+  if (startsWith(buffer, PNG_MAGIC) || startsWith(buffer, JPEG_MAGIC)) return buffer;
+  if (!images) {
+    throw new Error('Image is not PNG/JPEG and no IMAGES binding is configured to convert it.');
   }
-  return buffer;
+  try {
+    const stream = new Blob([buffer]).stream() as ReadableStream<Uint8Array>;
+    const result = await images.input(stream).output({ format: 'image/png' });
+    const png = new Uint8Array(await result.response().arrayBuffer());
+    if (!startsWith(png, PNG_MAGIC)) throw new Error('not png');
+    return png;
+  } catch {
+    throw new Error('Image content is not a supported image format (PNG, JPEG, WebP, GIF, AVIF).');
+  }
 }
 
-async function loadImage(value: unknown, urlOptions: ImageUrlConfig): Promise<Uint8Array> {
+async function loadImage(
+  value: unknown,
+  urlOptions: ImageUrlConfig,
+  images?: ImagesBinding,
+): Promise<Uint8Array> {
   let resolved = value;
   if (resolved && typeof resolved === 'object') resolved = (resolved as { src?: unknown }).src;
   if (typeof resolved === 'string' && /^https?:\/\//i.test(resolved.trim())) {
     if (!urlOptions.enabled) throw new Error('Image URLs are disabled.');
-    return assertImageContent(await fetchImage(resolved, urlOptions));
+    return normalizeImage(await fetchImage(resolved, urlOptions), images);
   }
   return decodeDataUri(resolved);
 }
@@ -131,11 +143,11 @@ function resolveSize(img: Uint8Array, tagValue: unknown): [number, number] {
   return [dims.width, dims.height];
 }
 
-export function createImageModule(urlOptions: ImageUrlConfig): ImageModule {
+export function createImageModule(urlOptions: ImageUrlConfig, images?: ImagesBinding): ImageModule {
   return new ImageModule({
     centered: false,
     fileType: 'docx',
-    getImage: (tagValue: unknown) => loadImage(tagValue, urlOptions),
+    getImage: (tagValue: unknown) => loadImage(tagValue, urlOptions, images),
     getSize: (img: Uint8Array, tagValue: unknown) => resolveSize(img, tagValue),
   });
 }

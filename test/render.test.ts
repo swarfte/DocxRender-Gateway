@@ -177,6 +177,38 @@ test('inserts image from http URL', async () => {
   );
 });
 
+// Stand-in for the Cloudflare Images binding: "converts" any input to the 1x1 PNG.
+const fakeImages = {
+  input: (_stream: ReadableStream<Uint8Array>) => ({
+    output: async (_o: { format: 'image/png' }) => ({ response: () => new Response(PNG_BYTES) }),
+  }),
+};
+
+test('converts a WebP URL image (e.g. Brandfetch) to PNG via the IMAGES binding', async () => {
+  const webp = Buffer.from('RIFF$   WEBPVP8 ', 'binary');
+  await withImageServer(
+    (req, res) => {
+      res.setHeader('Content-Type', 'image/webp');
+      res.end(webp);
+    },
+    async (base) => {
+      const res = await renderUrl({ ...urlEnv(), IMAGES: fakeImages }, `${base}/wynnmacau.com?c=abc`);
+      assert.equal(res.status, 200, await res.clone().text());
+      const zip = new PizZip(new Uint8Array(await res.arrayBuffer()));
+      assert.ok(Object.keys(zip.files).some((f) => String(f).startsWith('word/media/')));
+    },
+  );
+});
+
+test('non-PNG/JPEG URL image without IMAGES binding is rejected with 422', async () => {
+  await withImageServer(
+    (req, res) => res.end(Buffer.from('RIFF$   WEBPVP8 ', 'binary')),
+    async (base) => {
+      assert.equal((await renderUrl(urlEnv(), `${base}/x`)).status, 422);
+    },
+  );
+});
+
 test('follows redirects to an image', async () => {
   await withImageServer(
     (req, res) => {

@@ -3,7 +3,7 @@ import expressionParser from 'docxtemplater/expressions.js';
 import { HttpError, errors } from './errors';
 import { loadDocx } from './validate-docx';
 import { applyImageSizes, assertSupportedImages, createImageModule } from './image-module';
-import type { ImageUrlConfig } from './config';
+import type { ImageUrlConfig, ImagesBinding } from './config';
 import type { JsonValue } from './validate-json';
 
 // docxtemplater would print multi-errors (template excerpts and stacks) to the
@@ -30,13 +30,14 @@ async function renderCore(
   template: Uint8Array,
   data: JsonValue,
   urlOptions: ImageUrlConfig,
+  images?: ImagesBinding,
 ): Promise<Uint8Array> {
   try {
     assertSupportedImages(data);
     applyImageSizes(data);
     const zip = loadDocx(template);
     const doc = new Docxtemplater(zip, {
-      modules: [createImageModule(urlOptions)],
+      modules: [createImageModule(urlOptions, images)],
       parser: expressionParser,
       paragraphLoop: true,
       linebreaks: true,
@@ -58,18 +59,20 @@ export async function renderDocx({
   template,
   data,
   urlOptions,
+  images,
   timeoutMs,
 }: {
   template: Uint8Array;
   data: JsonValue;
   urlOptions: ImageUrlConfig;
+  images?: ImagesBinding;
   timeoutMs: number;
 }): Promise<Uint8Array> {
   // Yield to the event loop before starting: concurrent requests must observe
   // the busy window (worker-thread startup provided this boundary in Node),
   // and a wall-clock deadline can only preempt renders between macrotasks.
   await new Promise((resolve) => setTimeout(resolve, 0));
-  const work = renderCore(template, data, urlOptions);
+  const work = renderCore(template, data, urlOptions, images);
   let timer: number | null = null;
   const timeoutPromise = new Promise<never>((_, reject) => {
     timer = setTimeout(() => reject(errors.timeout()), timeoutMs);
